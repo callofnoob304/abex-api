@@ -6,6 +6,7 @@ import path from 'path';
 import routes from './routes';
 import cors from 'cors';
 import fileupload from 'express-fileupload';
+require('./models')
 
 const app = express();
 
