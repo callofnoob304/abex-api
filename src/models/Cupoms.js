@@ -22,7 +22,7 @@ const Cupoms = sequelize.define(
     },
 
     value: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.NUMERIC,
       allowNull: false,
     },
 

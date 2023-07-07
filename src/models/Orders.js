@@ -20,7 +20,7 @@ const Orders = sequelize.define(
     },
 
     total: {
-      type: DataTypes.FLOAT,
+      type: DataTypes.NUMERIC,
       allowNull: false,
     },
 

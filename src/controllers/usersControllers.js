@@ -1,4 +1,7 @@
 import Users from "../models/Users"
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
 
 const get = async (req, res) => {
   try {
@@ -58,15 +61,26 @@ const persist = async (req, res) => {
 }
 
 const create = async (dados, res) => {
-  let { username, cpf, name, phone, passwordHash, token, role, cart, email, recuperation } = dados;
+  let { username, cpf, name, phone, password, role, cart, email, recuperation } = dados;
+
+  let passwordHash = await bcrypt.hash(password, 10);
+
+  let userExist = await Users.findOne({ where: { email } });
+
+  if(userExist) {
+    return res.status(400).send({
+      type: 'error',
+      message: `Esse email ja esta sedo utilizado`,
+      error: []
+    });
+  }
 
   let response = await Users.create({
     username, 
     cpf, 
     name, 
     phone, 
-    passwordHash, 
-    token, 
+    passwordHash,
     role, 
     cart, 
     email, 
@@ -75,7 +89,7 @@ const create = async (dados, res) => {
 
   return res.status(200).send({
     type: 'success',
-    message: `Cadastro realizado com sucesso`,
+    message: `Cadastro realizado com suce10sso`,
     data: response 
   });
 }
@@ -137,8 +151,50 @@ const destroy = async (req, res) => {
   }
 }
 
+const login = async (req, res) => {
+  try {
+    let { email, password } = req.query;
+
+    let user = await Users.findOne({
+      where: {
+        email
+      }
+    });
+
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      return res.status(500).send({
+        type: 'error',
+        message: 'Usuário ou senha incorretos!'
+      });
+    }
+
+    let token = jwt.sign(
+      { userId: Users.id, username: Users.username, role: Users.role }, //payload - dados utilizados na criacao do token
+      process.env.TOKEN_KEY, //chave PRIVADA da aplicação 
+      { expiresIn: '1h' } //options ... em quanto tempo ele expira...
+    );
+
+    user.token = token;
+    await user.save();
+
+    return res.status(200).send({
+      type: 'success',
+      message: 'Bem-vindo! Login realizado com sucesso!',
+      data: user,
+      token 
+    });
+  } catch (error) {
+    return res.status(400).send({
+      type: 'error',
+      message: 'Ops! Ocorreu um erro!',
+      data: error.message
+    });
+  }
+}
+
 export default {
   get,
   persist,
-  destroy
+  destroy,
+  login
 }

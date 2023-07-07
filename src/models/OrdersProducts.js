@@ -14,7 +14,7 @@ const OrdersProducts = sequelize.define(
 
     priceProducts: {
       field: 'price_products',
-      type: DataTypes.FLOAT,
+      type: DataTypes.NUMERIC,
       allowNull: false,
     },
     

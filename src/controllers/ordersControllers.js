@@ -58,12 +58,17 @@ const persist = async (req, res) => {
 }
 
 const create = async (dados, res) => {
-  let { status, total, totalDiscount } = dados;
+  let { status, total, totalDiscount, idUserCostumer, idUserDeliver, idAdresses, idPayment, idCupoms } = dados;
 
   let response = await Orders.create({
     status,
     total,
-    totalDiscount
+    totalDiscount,
+    idUserCostumer,
+    idUserDeliver,
+    idAdresses,
+    idPayment,
+    idCupoms
   });
 
   return res.status(200).send({
