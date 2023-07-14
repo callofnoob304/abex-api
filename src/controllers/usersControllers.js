@@ -1,6 +1,7 @@
 import Users from "../models/Users"
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import getUserByToken from "../utils/getUserByToken";
 
 
 const get = async (req, res) => {
@@ -21,7 +22,7 @@ const get = async (req, res) => {
     let response = await Users.findOne({ where: { id } });
 
     if (!response) {
-      return res.status(200).send({
+      return res.status(400).send({
         type: 'error',
         message: `Nenhum registro com id ${id}`,
         data: [] 
@@ -34,7 +35,7 @@ const get = async (req, res) => {
       data: response 
     });
   } catch (error) {
-    return res.status(200).send({
+    return res.status(400).send({
       type: 'error',
       message: `Ops! Ocorreu um erro`,
       error: error.message 
@@ -52,7 +53,7 @@ const persist = async (req, res) => {
 
     return await update(id, req.body, res)
   } catch (error) {
-    return res.status(200).send({
+    return res.status(400).send({
       type: 'error',
       message: `Ops! Ocorreu um erro`,
       error: error
@@ -98,7 +99,7 @@ const update = async (id, dados, res) => {
   let response = await Users.findOne({ where: { id } });
 
   if (!response) {
-    return res.status(200).send({
+    return res.status(400).send({
       type: 'error',
       message: `Nenhum registro com id ${id} para atualizar`,
       data: [] 
@@ -119,7 +120,7 @@ const destroy = async (req, res) => {
   try {
     let id = req.params.id ? req.params.id.toString().replace(/\D/g, '') : null;
     if (!id) {
-      return res.status(200).send({
+      return res.status(400).send({
         type: 'error',
         message: `Informe um id para deletar o registro`,
         data: [] 
@@ -129,7 +130,7 @@ const destroy = async (req, res) => {
     let response = await Users.findOne({ where: { id } });
 
     if (!response) {
-      return res.status(200).send({
+      return res.status(400).send({
         type: 'error',
         message: `Nenhum registro com id ${id} para deletar`,
         data: [] 
@@ -143,7 +144,7 @@ const destroy = async (req, res) => {
       data: [] 
     });
   } catch (error) {
-    return res.status(200).send({
+    return res.status(400).send({
       type: 'error',
       message: `Ops! Ocorreu um erro`,
       error: error.message 
@@ -162,14 +163,14 @@ const login = async (req, res) => {
     });
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      return res.status(500).send({
+      return res.status(400).send({
         type: 'error',
         message: 'Usuário ou senha incorretos!'
       });
     }
 
     let token = jwt.sign(
-      { userId: Users.id, username: Users.username, role: Users.role }, //payload - dados utilizados na criacao do token
+      { userId: user.id, username: user.username, role: user.role }, //payload - dados utilizados na criacao do token
       process.env.TOKEN_KEY, //chave PRIVADA da aplicação 
       { expiresIn: '1h' } //options ... em quanto tempo ele expira...
     );
@@ -192,9 +193,73 @@ const login = async (req, res) => {
   }
 }
 
+const validate = async (req, res) => {
+  try {
+    let token = req.headers.authorization;
+    if (token) {
+      token = token.split(' ')[1]
+      let funcao = jwt.verify(token, process.env.TOKEN_KEY);
+      return res.status(200).send({role: funcao.role });
+    }
+  } catch (error) {
+    res.status(400).send({
+      type: 'error',
+      message: 'Ops! Ocorreu um erro',
+      data: error.message
+    })
+  }
+}
+
+const getByToken = async (req, res) => {
+  try{
+    let user = await getUserByToken.getUserByToken(req.headers.authorization);
+    let idUser = user.id 
+    return await getById(idUser, res)
+  }catch(err){
+    return res.status(200).send({
+      type: 'error',
+      message: 'Ops! Ocorreu um erro!',
+      data: err.message
+    });
+  }
+}
+
+const getById = async (id, res) =>{
+  try {
+    let response = await Users.findOne({
+      where:{
+        id
+      }
+    })
+
+    if (!response) {
+      return res.status(200).send({
+        type: 'warning',
+        message: 'Não foi encontrado usuario com este ID',
+      });
+    }
+    
+    return res.status(200).send({
+      type: 'sucess',
+      message: 'Usuario encontrado',
+      data: response
+    });
+
+  } catch (error) {
+    return res.status(200).send({
+      type: 'error',
+      message: 'Ops! Ocorreu um erro!',
+      data: error
+    });
+  }
+}
+
+
 export default {
   get,
   persist,
   destroy,
-  login
+  login,
+  validate,
+  getByToken
 }
